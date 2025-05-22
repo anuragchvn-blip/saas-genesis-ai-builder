@@ -1,6 +1,8 @@
 
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import HeroSection from '@/components/HeroSection';
 import FeaturesSection from '@/components/FeaturesSection';
 import PricingSection from '@/components/PricingSection';
@@ -45,6 +47,7 @@ const Index = () => {
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleGenerate = async (idea: string) => {
     setIsLoading(true);
@@ -62,6 +65,31 @@ const Index = () => {
         title: "Landing page generated! 🎉",
         description: "Your SaaS landing page has been created successfully.",
       });
+      
+      // Save to Supabase if user is logged in
+      if (user) {
+        try {
+          const { error } = await supabase.from('templates').insert({
+            user_id: user.id,
+            idea_text: idea,
+            generated_json: content
+          });
+          
+          if (error) throw error;
+          
+          toast({
+            title: "Template saved",
+            description: "Your template has been saved to your account.",
+          });
+        } catch (saveError) {
+          console.error('Error saving template:', saveError);
+          toast({
+            variant: "destructive",
+            title: "Save failed",
+            description: "Could not save your template. Please try again.",
+          });
+        }
+      }
       
       // Scroll to see the generated content
       setTimeout(() => {
